@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/group_model.dart';
 import '../models/event_model.dart';
-import 'package:intl/intl.dart';
 
 class EventCreateScreen extends StatefulWidget {
   final GroupModel group;
@@ -13,98 +13,145 @@ class EventCreateScreen extends StatefulWidget {
 }
 
 class _EventCreateScreenState extends State<EventCreateScreen> {
-  final _titleController = TextEditingController();
-  DateTime? _selectedDateTime;
-  bool _isSubmitting = false;
+  final _formKey = GlobalKey<FormState>();
 
-  void _pickDateTime() async {
-    final date = await showDatePicker(
+  final _nameController = TextEditingController();
+  final _eventController = TextEditingController();
+  final _amountController = TextEditingController();
+
+  DateTime? _selectedDate;
+  String _selectedTimeSlot = 'Morning';
+  String _selectedPaymentMode = 'Cash';
+
+  void _pickDate() async {
+    final picked = await showDatePicker(
       context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
       firstDate: DateTime.now().subtract(const Duration(days: 1)),
       lastDate: DateTime(2100),
-      initialDate: DateTime.now(),
     );
-
-    if (date == null) return;
-
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-    );
-
-    if (time == null) return;
-
-    setState(() {
-      _selectedDateTime = DateTime(
-        date.year,
-        date.month,
-        date.day,
-        time.hour,
-        time.minute,
-      );
-    });
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+    }
   }
 
-  void _submitEvent() {
-    if (_titleController.text.trim().isEmpty || _selectedDateTime == null) {
+  void _submitForm() {
+    if (_formKey.currentState?.validate() != true || _selectedDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter all fields.')),
+        const SnackBar(content: Text('Please complete all required fields.')),
       );
       return;
     }
 
-    setState(() => _isSubmitting = true);
-
     final newEvent = EventModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: _titleController.text.trim(),
-      datetime: _selectedDateTime!,
-      imageUrl: null,
+      title: _eventController.text.trim(),
+      datetime: _selectedDate!.add(
+        _selectedTimeSlot == 'Morning'
+            ? const Duration(hours: 8)
+            : _selectedTimeSlot == 'Evening'
+                ? const Duration(hours: 17)
+                : const Duration(hours: 12),
+      ),
+      imageUrl: null, // Not supported in this mock flow
     );
 
     widget.group.events.add(newEvent);
 
-    Future.delayed(const Duration(milliseconds: 300), () {
-      Navigator.pop(context, true); // pop with result = true
-    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Event created successfully')),
+    );
+
+    Navigator.pop(context, true);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Event')),
+      appBar: AppBar(title: const Text('Create Event')),
       body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            TextField(
-              controller: _titleController,
-              decoration: const InputDecoration(labelText: 'Event Title'),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Text(
-                  _selectedDateTime == null
-                      ? 'No date selected'
-                      : DateFormat('yyyy-MM-dd hh:mm a').format(_selectedDateTime!),
-                ),
-                const Spacer(),
-                ElevatedButton(
-                  onPressed: _pickDateTime,
-                  child: const Text('Pick Date & Time'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 30),
-            _isSubmitting
-                ? const CircularProgressIndicator()
-                : ElevatedButton.icon(
-                    icon: const Icon(Icons.check),
-                    label: const Text('Add Event'),
-                    onPressed: _submitEvent,
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: 'Name'),
+                validator: (val) =>
+                    val == null || val.trim().isEmpty ? 'Required' : null,
+              ),
+              TextFormField(
+                controller: _eventController,
+                decoration: const InputDecoration(labelText: 'Event'),
+                validator: (val) =>
+                    val == null || val.trim().isEmpty ? 'Required' : null,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Text(
+                    _selectedDate == null
+                        ? 'No date selected'
+                        : DateFormat('yyyy-MM-dd').format(_selectedDate!),
                   ),
-          ],
+                  const Spacer(),
+                  ElevatedButton(
+                    onPressed: _pickDate,
+                    child: const Text('Pick Date'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _selectedTimeSlot,
+                decoration: const InputDecoration(labelText: 'Time Slot'),
+                items: const [
+                  DropdownMenuItem(value: 'Morning', child: Text('Morning: 6AM–2PM')),
+                  DropdownMenuItem(value: 'Evening', child: Text('Evening: 4PM–10PM')),
+                  DropdownMenuItem(value: 'Full Day', child: Text('Full Day')),
+                ],
+                onChanged: (val) =>
+                    setState(() => _selectedTimeSlot = val ?? 'Morning'),
+              ),
+              TextFormField(
+                controller: _amountController,
+                decoration: const InputDecoration(labelText: 'Amount'),
+                keyboardType: TextInputType.number,
+                validator: (val) =>
+                    val == null || val.trim().isEmpty ? 'Required' : null,
+              ),
+              DropdownButtonFormField<String>(
+                value: _selectedPaymentMode,
+                decoration: const InputDecoration(labelText: 'Payment Mode'),
+                items: const [
+                  DropdownMenuItem(value: 'Cash', child: Text('Cash')),
+                  DropdownMenuItem(value: 'Check', child: Text('Check')),
+                  DropdownMenuItem(value: 'Online', child: Text('Online')),
+                ],
+                onChanged: (val) =>
+                    setState(() => _selectedPaymentMode = val ?? 'Cash'),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.cancel),
+                    label: const Text('Cancel'),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.check),
+                    label: const Text('Create'),
+                    onPressed: _submitForm,
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

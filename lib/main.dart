@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/login_screen.dart';
+import 'screens/group_list_screen.dart';
 
 void main() {
   runApp(const EventApp());
@@ -16,8 +17,13 @@ class EventApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
       ),
-      home: const LoginScreen(), // ← CHANGED HERE
       debugShowCheckedModeBanner: false,
+      initialRoute: '/login',
+      routes: {
+        '/login': (context) => const LoginScreen(),
+        '/groups': (context) => const GroupListScreen(),
+        // add more named routes here if needed later
+      },
     );
   }
 }

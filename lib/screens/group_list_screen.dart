@@ -38,8 +38,16 @@ class _GroupListScreenState extends State<GroupListScreen> {
               );
             },
           ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Logout',
+            onPressed: () {
+              Navigator.pushReplacementNamed(context, '/login');
+            },
+          ),
         ],
       ),
+
       body: FutureBuilder<List<GroupModel>>(
         future: _groupsFuture,
         builder: (context, snapshot) {
