@@ -1,0 +1,21 @@
+[
+  {
+    "_id": "grp001",
+    "name": "Team A Events",
+    "members": ["user1", "user2"],
+    "events": [
+      {
+        "_id": "evt01",
+        "title": "Meeting with CEO",
+        "date": "2025-07-10T09:30:00.000Z",
+        "imageUrl": null
+      }
+    ]
+  },
+  {
+    "_id": "grp002",
+    "name": "Family Calendar",
+    "members": ["user1"],
+    "events": []
+  }
+]

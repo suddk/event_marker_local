@@ -1,0 +1,20 @@
+[
+  {
+    "_id": "notif001",
+    "userId": "user1",
+    "title": "Event Reminder",
+    "message": "Don't forget the meeting with CEO tomorrow at 9:30 AM.",
+    "eventId": "evt01",
+    "timestamp": "2025-07-09T18:00:00.000Z",
+    "read": false
+  },
+  {
+    "_id": "notif002",
+    "userId": "user2",
+    "title": "New Event Added",
+    "message": "A new event 'Family Dinner' has been added to Family Calendar.",
+    "eventId": "evt05",
+    "timestamp": "2025-07-08T20:15:00.000Z",
+    "read": true
+  }
+]

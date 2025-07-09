@@ -1,0 +1,14 @@
+[
+  {
+    "_id": "user1",
+    "phone": "+919999999999",
+    "password": "admin123",
+    "name": "Sudarshan"
+  },
+  {
+    "_id": "user2",
+    "phone": "+918888888888",
+    "password": "testpass",
+    "name": "Ravi"
+  }
+]
