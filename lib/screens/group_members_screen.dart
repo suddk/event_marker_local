@@ -34,16 +34,27 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
   }
 
   void _showAddMemberDialog() {
-    String phone = '';
+    final nameController = TextEditingController();
+    final phoneController = TextEditingController();
+
     showDialog(
       context: context,
       builder: (_) {
         return AlertDialog(
           title: const Text('Add Member'),
-          content: TextField(
-            decoration: const InputDecoration(labelText: 'Enter phone number'),
-            keyboardType: TextInputType.phone,
-            onChanged: (val) => phone = val.trim(),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Name'),
+              ),
+              TextField(
+                controller: phoneController,
+                decoration: const InputDecoration(labelText: 'Phone Number'),
+                keyboardType: TextInputType.phone,
+              ),
+            ],
           ),
           actions: [
             TextButton(
@@ -52,13 +63,29 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                final existingUser = allUsers.firstWhere(
+                final name = nameController.text.trim();
+                final phone = phoneController.text.trim();
+
+                if (name.isEmpty || phone.isEmpty) return;
+
+                UserModel? existingUser = allUsers.firstWhere(
                   (u) => u.phone == phone,
-                  orElse: () => UserModel(id: '', name: '', phone: '', password: ''),
+                  orElse: () => UserModel(
+                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                    name: name,
+                    phone: phone,
+                    password: 'default123', // or prompt user to set
+                  ),
                 );
 
-                if (existingUser.id.isNotEmpty &&
-                    !widget.group.members.contains(existingUser.id)) {
+                // Add to global list if it's a new user
+                if (!allUsers.any((u) => u.phone == phone)) {
+                  setState(() {
+                    allUsers.add(existingUser);
+                  });
+                }
+
+                if (!widget.group.members.contains(existingUser.id)) {
                   setState(() {
                     widget.group.members.add(existingUser.id);
                     groupUsers.add(existingUser);
@@ -74,6 +101,7 @@ class _GroupMembersScreenState extends State<GroupMembersScreen> {
       },
     );
   }
+
 
   @override
   Widget build(BuildContext context) {

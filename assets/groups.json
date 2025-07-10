@@ -7,7 +7,9 @@
       {
         "_id": "evt01",
         "title": "Meeting with CEO",
-        "date": "2025-07-10T09:30:00.000Z",
+        "datetime": "2025-07-10T09:30:00.000Z",
+        "amount": 500.0,
+        "paymentMode": "Online",
         "imageUrl": null
       }
     ]

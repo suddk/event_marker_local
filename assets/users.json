@@ -1,14 +1,16 @@
 [
   {
-    "_id": "user1",
+    "id": "user1",
     "phone": "+919999999999",
     "password": "admin123",
-    "name": "Sudarshan"
+    "name": "Sudarshan",
+    "isAdmin": true
   },
   {
-    "_id": "user2",
+    "id": "user2",
     "phone": "+918888888888",
     "password": "testpass",
-    "name": "Ravi"
+    "name": "Ravi",
+    "isAdmin": false
   }
 ]

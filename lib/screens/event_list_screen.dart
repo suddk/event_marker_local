@@ -4,6 +4,7 @@ import '../models/event_model.dart';
 import 'calendar_view_screen.dart';
 import 'group_members_screen.dart';
 import 'event_create_screen.dart';
+import 'event_detail_screen.dart';
 import 'package:intl/intl.dart';
 
 class EventListScreen extends StatefulWidget {
@@ -132,9 +133,16 @@ class _EventListScreenState extends State<EventListScreen> {
                       final e = events[index];
                       return ListTile(
                         title: Text(e.title),
-                        subtitle: Text(DateFormat('yyyy-MM-dd hh:mm a')
-                            .format(e.datetime)),
+                        subtitle: Text(DateFormat('yyyy-MM-dd hh:mm a').format(e.datetime)),
                         trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => EventDetailScreen(group: widget.group, event: e),
+                            ),
+                          );
+                        },
                       );
                     },
                   ),

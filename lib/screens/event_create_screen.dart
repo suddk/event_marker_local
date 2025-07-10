@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/group_model.dart';
 import '../models/event_model.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 
 class EventCreateScreen extends StatefulWidget {
   final GroupModel group;
+  final EventModel? existingEvent;
 
-  const EventCreateScreen({super.key, required this.group});
+  const EventCreateScreen({super.key, required this.group, this.existingEvent,});
 
   @override
   State<EventCreateScreen> createState() => _EventCreateScreenState();
@@ -23,6 +26,31 @@ class _EventCreateScreenState extends State<EventCreateScreen> {
   String _selectedTimeSlot = 'Morning';
   String _selectedPaymentMode = 'Cash';
 
+  @override
+  void initState() {
+    super.initState();
+
+    final event = widget.existingEvent;
+    if (event != null) {
+      _nameController.text = event.title; // Assuming title is reused
+      _eventController.text = event.title;
+      _amountController.text = event.amount?.toString() ?? '';
+      _selectedDate = event.datetime;
+      _selectedTimeSlot = _determineTimeSlot(event.datetime);
+      _selectedPaymentMode = event.paymentMode ?? 'Cash';
+    }
+  }
+
+  String _determineTimeSlot(DateTime dt) {
+    final hour = dt.hour;
+    if (hour >= 6 && hour < 14) return 'Morning';
+    if (hour >= 16 && hour < 22) return 'Evening';
+    return 'Full Day';
+  }
+
+  File? _voucherImage;
+  final ImagePicker _picker = ImagePicker();
+
   void _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -33,6 +61,25 @@ class _EventCreateScreenState extends State<EventCreateScreen> {
     if (picked != null) {
       setState(() => _selectedDate = picked);
     }
+  }
+
+  void _pickVoucherImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() => _voucherImage = File(pickedFile.path));
+    }
+  }
+
+  Widget _voucherPreview() {
+    if (_voucherImage != null) {
+      return Image.file(
+        _voucherImage!,
+        height: 150,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
+    }
+    return const Text('No image selected.');
   }
 
   void _submitForm() {
@@ -53,7 +100,11 @@ class _EventCreateScreenState extends State<EventCreateScreen> {
                 ? const Duration(hours: 17)
                 : const Duration(hours: 12),
       ),
-      imageUrl: null, // Not supported in this mock flow
+      imageUrl: _voucherImage?.path,
+      amount: _amountController.text.trim().isEmpty
+          ? null
+          : double.tryParse(_amountController.text.trim()),
+      paymentMode: _selectedPaymentMode,
     );
 
     widget.group.events.add(newEvent);
@@ -118,8 +169,7 @@ class _EventCreateScreenState extends State<EventCreateScreen> {
                 controller: _amountController,
                 decoration: const InputDecoration(labelText: 'Amount'),
                 keyboardType: TextInputType.number,
-                validator: (val) =>
-                    val == null || val.trim().isEmpty ? 'Required' : null,
+                // No validator — now optional
               ),
               DropdownButtonFormField<String>(
                 value: _selectedPaymentMode,
@@ -131,6 +181,15 @@ class _EventCreateScreenState extends State<EventCreateScreen> {
                 ],
                 onChanged: (val) =>
                     setState(() => _selectedPaymentMode = val ?? 'Cash'),
+              ),
+              const SizedBox(height: 24),
+              const Text('Upload Voucher (optional):'),
+              const SizedBox(height: 8),
+              _voucherPreview(),
+              TextButton.icon(
+                icon: const Icon(Icons.upload),
+                label: const Text('Select Image'),
+                onPressed: _pickVoucherImage,
               ),
               const SizedBox(height: 24),
               Row(

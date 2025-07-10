@@ -1,20 +1,16 @@
 [
   {
-    "_id": "notif001",
+    "id": "note001",
     "userId": "user1",
-    "title": "Event Reminder",
-    "message": "Don't forget the meeting with CEO tomorrow at 9:30 AM.",
-    "eventId": "evt01",
-    "timestamp": "2025-07-09T18:00:00.000Z",
-    "read": false
+    "message": "Reminder: Meeting with CEO at 9:30 AM",
+    "timestamp": "2025-07-10T07:30:00.000Z",
+    "eventId": "evt01"
   },
   {
-    "_id": "notif002",
+    "id": "note002",
     "userId": "user2",
-    "title": "New Event Added",
-    "message": "A new event 'Family Dinner' has been added to Family Calendar.",
-    "eventId": "evt05",
-    "timestamp": "2025-07-08T20:15:00.000Z",
-    "read": true
+    "message": "Reminder: CEO Meeting Today",
+    "timestamp": "2025-07-10T07:30:00.000Z",
+    "eventId": "evt01"
   }
 ]
