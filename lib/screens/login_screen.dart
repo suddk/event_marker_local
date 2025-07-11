@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import '../services/mock_data_service.dart';
 import '../models/user_model.dart';
+import '../services/service_locator.dart';
 import 'group_list_screen.dart';
+import '../services/session_service.dart';
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,56 +15,64 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
-  String? _errorText;
   bool _isLoading = false;
+  String? _errorMessage;
 
-  Future<void> _attemptLogin() async {
-    setState(() {
-      _errorText = null;
-      _isLoading = true;
-    });
+  void _login() async {
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
 
-    final users = await MockDataService.loadUsers();
-    final enteredPhone = _phoneController.text.trim();
-    final enteredPass = _passwordController.text;
-
-    final matchedUser = users.firstWhere(
-      (user) =>
-          user.phone == enteredPhone && user.password == enteredPass,
-      orElse: () => UserModel(id: '', phone: '', password: '', name: ''),
+  try {
+    final users = await ServiceLocator.dataService.loadUsers();
+    final user = users.firstWhere(
+      (u) =>
+          u.phone == _phoneController.text.trim() &&
+          u.password == _passwordController.text.trim(),
+      orElse: () => UserModel(
+        id: '',
+        name: '',
+        phone: '',
+        password: '',
+        isAdmin: false, 
+      ),
     );
 
-    setState(() {
-      _isLoading = false;
-    });
 
-    if (matchedUser.id.isEmpty) {
+    if (user.id.isEmpty) {
       setState(() {
-        _errorText = 'Invalid phone number or password.';
+        _errorMessage = 'Invalid phone or password';
+        _isLoading = false;
       });
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const GroupListScreen(),
-        ),
-      );
+      return;
+    }
+
+    // ✅ Store the full user object in session
+    SessionService.login(user);
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const GroupListScreen(),
+      ),
+    );
+
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Login failed: $e';
+        _isLoading = false;
+      });
     }
   }
 
-  @override
-  void dispose() {
-    _phoneController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Login')),
       body: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             TextField(
@@ -70,21 +80,27 @@ class _LoginScreenState extends State<LoginScreen> {
               keyboardType: TextInputType.phone,
               decoration: const InputDecoration(labelText: 'Phone Number'),
             ),
+            const SizedBox(height: 12),
             TextField(
               controller: _passwordController,
               obscureText: true,
               decoration: const InputDecoration(labelText: 'Password'),
             ),
-            const SizedBox(height: 20),
-            if (_errorText != null)
-              Text(_errorText!, style: const TextStyle(color: Colors.red)),
-            const SizedBox(height: 10),
-            _isLoading
-                ? const CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: _attemptLogin,
-                    child: const Text('Login'),
-                  ),
+            const SizedBox(height: 24),
+            if (_isLoading)
+              const CircularProgressIndicator()
+            else
+              ElevatedButton(
+                onPressed: _login,
+                child: const Text('Login'),
+              ),
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 16),
+              Text(
+                _errorMessage!,
+                style: const TextStyle(color: Colors.red),
+              ),
+            ]
           ],
         ),
       ),

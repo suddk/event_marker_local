@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/group_model.dart';
-import '../services/mock_data_service.dart';
+import '../models/user_model.dart';
+import '../services/service_locator.dart';
+import '../services/session_service.dart';
 import 'event_list_screen.dart';
-import 'notification_screen.dart';
 
 class GroupListScreen extends StatefulWidget {
   const GroupListScreen({super.key});
@@ -13,11 +14,23 @@ class GroupListScreen extends StatefulWidget {
 
 class _GroupListScreenState extends State<GroupListScreen> {
   late Future<List<GroupModel>> _groupsFuture;
+  late UserModel? currentUser;
 
   @override
   void initState() {
     super.initState();
-    _groupsFuture = MockDataService.loadGroups();
+    currentUser = SessionService.currentUser;
+    _groupsFuture = _loadUserGroups();
+  }
+
+  Future<List<GroupModel>> _loadUserGroups() async {
+    final allGroups = await ServiceLocator.dataService.loadGroups();
+    if (currentUser == null) return [];
+
+    // Only show groups where this user is a member
+    return allGroups
+        .where((group) => group.members.contains(currentUser!.id))
+        .toList();
   }
 
   @override
@@ -27,27 +40,15 @@ class _GroupListScreenState extends State<GroupListScreen> {
         title: const Text('Your Groups'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications),
-            tooltip: 'Notifications',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const NotificationScreen(),
-                ),
-              );
-            },
-          ),
-          IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Logout',
             onPressed: () {
-              Navigator.pushReplacementNamed(context, '/login');
+              SessionService.logout();
+              Navigator.pushReplacementNamed(context, '/');
             },
           ),
         ],
       ),
-
       body: FutureBuilder<List<GroupModel>>(
         future: _groupsFuture,
         builder: (context, snapshot) {

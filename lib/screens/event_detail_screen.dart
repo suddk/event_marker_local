@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/event_model.dart';
 import '../models/group_model.dart';
+import '../models/user_model.dart';
+import '../services/session_service.dart';
 import 'event_create_screen.dart';
 
 class EventDetailScreen extends StatelessWidget {
@@ -14,8 +16,51 @@ class EventDetailScreen extends StatelessWidget {
     required this.event,
   });
 
+  bool _canDeleteEvent(UserModel user) {
+    if (user.isAdmin) return true;
+    final now = DateTime.now();
+    final diff = event.datetime.difference(now);
+    return diff.inHours >= 2;
+  }
+
+  void _deleteEvent(BuildContext context) {
+    group.events.removeWhere((e) => e.id == event.id);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Event deleted')),
+    );
+    Navigator.pop(context, true);
+  }
+
+  void _confirmDelete(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Confirm Deletion'),
+        content: const Text('Are you sure you want to delete this event?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              group.events.removeWhere((e) => e.id == event.id);
+              Navigator.pop(context); // Close dialog
+              Navigator.pop(context, true); // Go back and refresh list
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
+    final UserModel? user = SessionService.loggedInUser;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Event Details'),
@@ -53,31 +98,38 @@ class EventDetailScreen extends StatelessWidget {
               ),
             const Spacer(),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.arrow_back),
-                  label: const Text('Back'),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.edit),
-                  label: const Text('Edit'),
-                  onPressed: () async {
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => EventCreateScreen(
-                          group: group,
-                          existingEvent: event,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('Back'),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.edit),
+                    label: const Text('Edit'),
+                    onPressed: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => EventCreateScreen(group: group, existingEvent: event),
                         ),
-                      ),
-                    );
-                    if (result == true) Navigator.pop(context, true);
-                  },
-                ),
-              ],
-            )
+                      );
+                      if (result == true) Navigator.pop(context, true);
+                    },
+                  ),
+                  if (SessionService.isAdmin ||
+                      DateTime.now().isBefore(event.datetime.subtract(const Duration(hours: 2))))
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.delete),
+                      label: const Text('Delete'),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                      onPressed: () {
+                        _confirmDelete(context);
+                      },
+                    ),
+                ],
+              ),
           ],
         ),
       ),
