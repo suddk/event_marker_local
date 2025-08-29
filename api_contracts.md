@@ -1,307 +1,274 @@
-✅ Got it. Since we’ve agreed to consolidate everything into **one single file** for reference, here’s the latest **`api_contracts.md`** file. This will serve as the *source of truth* during the development cycle, so we don’t have to keep juggling scattered definitions.
 
----
+# API Contracts – Event Marker (Clean Spec)
 
-# `api_contracts.md`
+**Base URL prefix:** `/api/v1`  
+**Auth:** All protected routes require `Authorization: Bearer <jwt>`  
+**Dates:** ISO 8601 timestamps (e.g., `2025-09-10T00:00:00Z`).  
+**IDs:** Use `"id"` in payloads. (Avoid mixing `groupId`, `eventId`; the client can map as needed.)
 
-```markdown
-# Event Marker – API Contracts
-
-This document defines the API contracts for the Event Marker app.  
-It serves as the single source of truth for backend–frontend communication.  
-
-All endpoints are prefixed with:
+## Global Error Schema
+```json
+{
+  "error": {
+    "code": "STRING_CODE",
+    "message": "Human-readable message"
+  }
+}
 ```
-
-/api/v1
-
-````
 
 ---
 
 ## 1. Authentication
 
 ### 1.1 Register
-**POST** `/api/v1/auth/register`
-
-**Request**
+- **Endpoint**: `POST /api/v1/auth/register`
+- **Request**
 ```json
 {
-  "phone": "+91XXXXXXXXXX",
-  "password": "securePassword"
+  "phone": "9876543210",
+  "password": "securePass123"
 }
-````
-
-**Response**
-
+```
+- **Response**
 ```json
 {
-  "userId": "u12345",
+  "id": "u12345",
   "message": "User registered successfully"
 }
 ```
 
----
-
 ### 1.2 Login
-
-**POST** `/api/v1/auth/login`
-
-**Request**
-
+- **Endpoint**: `POST /api/v1/auth/login`
+- **Request**
 ```json
 {
-  "phone": "+91XXXXXXXXXX",
-  "password": "securePassword"
+  "phone": "9876543210",
+  "password": "securePass123"
 }
 ```
-
-**Response**
-
+- **Response**
 ```json
 {
-  "token": "jwt_token_here",
+  "token": "jwt-token-xyz",
   "user": {
     "id": "u12345",
-    "phone": "+91XXXXXXXXXX"
+    "phone": "9876543210"
   }
 }
 ```
 
----
-
-## 2. Groups
-
-### 2.1 Create Group
-
-**POST** `/api/v1/groups`
-
-**Request**
-
-```json
-{
-  "name": "Weekend Trips",
-  "description": "Friends group for trips",
-  "createdBy": "u12345"
-}
-```
-
-**Response**
-
-```json
-{
-  "groupId": "g67890",
-  "message": "Group created successfully"
-}
-```
+> **Note:** Profile fields (e.g., name, avatar) are *not* part of auth. Add a separate profile endpoint later if needed.
 
 ---
 
-### 2.2 Get My Groups
+## 2. Users (for member picker)
 
-**GET** `/api/v1/groups?userId=u12345`
-
-**Response**
-
+### 2.1 List Users
+- **Endpoint**: `GET /api/v1/users?query={q}`
+- **Response**
 ```json
 [
-  {
-    "groupId": "g67890",
-    "name": "Weekend Trips",
-    "description": "Friends group for trips"
-  }
+  { "id": "u1", "name": "Alice", "phone": "9990001111" },
+  { "id": "u2", "name": "Bob",   "phone": "9990002222" }
 ]
 ```
 
 ---
 
-### 2.3 Delete Group
+## 3. Groups
 
-**DELETE** `/api/v1/groups/{groupId}`
-
-**Response**
-
+### 3.1 Create Group
+- **Endpoint**: `POST /api/v1/groups`
+- **Request**
 ```json
 {
-  "message": "Group deleted successfully"
+  "name": "Weekend Trips",
+  "description": "Friends group for trips",
+  "createdBy": "u12345",
+  "memberIds": ["u12345", "u99999"]
+}
+```
+- **Response**
+```json
+{
+  "id": "g67890",
+  "name": "Weekend Trips",
+  "description": "Friends group for trips",
+  "createdBy": "u12345",
+  "memberIds": ["u12345", "u99999"],
+  "createdAt": "2025-08-22T18:30:00Z"
 }
 ```
 
----
-
-## 3. Events
-
-### 3.1 Create Event
-
-**POST** `/api/v1/events`
-
-**Request**
-
+### 3.2 Update Group (Admin only)
+- **Endpoint**: `PUT /api/v1/groups/{groupId}`
+- **Request**
 ```json
 {
-  "groupId": "g67890",
-  "title": "Goa Trip",
-  "date": "2025-09-10",
-  "imageUrl": "https://example.com/trip.png",
-  "createdBy": "u12345"
+  "name": "Weekend Trips Renamed",
+  "description": "Updated description",
+  "memberIds": ["u12345", "u99999", "u77777"]
+}
+```
+- **Response**
+```json
+{
+  "id": "g67890",
+  "name": "Weekend Trips Renamed",
+  "description": "Updated description",
+  "createdBy": "u12345",
+  "memberIds": ["u12345", "u99999", "u77777"],
+  "updatedAt": "2025-08-22T18:35:00Z"
 }
 ```
 
-**Response**
-
-```json
-{
-  "eventId": "e11223",
-  "message": "Event created successfully"
-}
-```
-
----
-
-### 3.2 Get Group Events
-
-**GET** `/api/v1/events?groupId=g67890`
-
-**Response**
-
+### 3.3 List My Groups
+- **Endpoint**: `GET /api/v1/groups?userId={userId}`
+- **Response**
 ```json
 [
   {
-    "eventId": "e11223",
+    "id": "g67890",
+    "name": "Weekend Trips",
+    "description": "Friends group for trips",
+    "createdBy": "u12345",
+    "memberIds": ["u12345", "u99999"]
+  }
+]
+```
+
+### 3.4 Delete Group (Admin only; cascade events)
+- **Endpoint**: `DELETE /api/v1/groups/{groupId}`
+- **Response**
+```json
+{ "success": true }
+```
+
+### 3.5 Group Members (explicit ops, optional if you prefer 3.1/3.2 bulk memberIds)
+- **Add Members**: `POST /api/v1/groups/{groupId}/members`
+  - **Request**
+  ```json
+  { "userIds": ["u77777", "u88888"] }
+  ```
+  - **Response**
+  ```json
+  {
+    "id": "g67890",
+    "memberIds": ["u12345", "u99999", "u77777", "u88888"]
+  }
+  ```
+
+- **Remove Member**: `DELETE /api/v1/groups/{groupId}/members/{userId}`
+  - **Response**
+  ```json
+  { "success": true }
+  ```
+
+---
+
+## 4. Join Requests
+
+### 4.1 Send Join Request
+- **Endpoint**: `POST /api/v1/groups/{groupId}/requests`
+- **Request**
+```json
+{ "userId": "u22222" }
+```
+- **Response**
+```json
+{
+  "id": "r999",
+  "groupId": "g67890",
+  "userId": "u22222",
+  "status": "PENDING",
+  "createdAt": "2025-08-22T18:31:00Z"
+}
+```
+
+### 4.2 List Pending Requests (Admin)
+- **Endpoint**: `GET /api/v1/groups/{groupId}/requests?status=PENDING`
+- **Response**
+```json
+[
+  { "id": "r999", "userId": "u22222", "status": "PENDING" }
+]
+```
+
+### 4.3 Approve/Reject Request (Admin)
+- **Endpoint**: `PUT /api/v1/groups/{groupId}/requests/{requestId}`
+- **Request**
+```json
+{ "status": "APPROVED" }
+```
+- **Response**
+```json
+{ "id": "r999", "status": "APPROVED" }
+```
+
+---
+
+## 5. Events
+
+### 5.1 Create Event
+- **Endpoint**: `POST /api/v1/groups/{groupId}/events`
+- **Request**
+```json
+{
+  "title": "Goa Trip",
+  "description": "3-day trip",
+  "date": "2025-09-10T00:00:00Z",
+  "createdBy": "u12345",
+  "imageUrl": "https://example.com/trip.png"
+}
+```
+- **Response**
+```json
+{
+  "id": "e11223",
+  "groupId": "g67890",
+  "title": "Goa Trip",
+  "description": "3-day trip",
+  "date": "2025-09-10T00:00:00Z",
+  "createdBy": "u12345",
+  "imageUrl": "https://example.com/trip.png",
+  "createdAt": "2025-08-22T18:40:00Z"
+}
+```
+
+### 5.2 List Group Events
+- **Endpoint**: `GET /api/v1/groups/{groupId}/events`
+- **Response**
+```json
+[
+  {
+    "id": "e11223",
+    "groupId": "g67890",
     "title": "Goa Trip",
-    "date": "2025-09-10",
+    "date": "2025-09-10T00:00:00Z",
     "imageUrl": "https://example.com/trip.png"
   }
 ]
 ```
 
----
-
-### 3.3 Delete Event
-
-**DELETE** `/api/v1/events/{eventId}`
-
-**Response**
-
+### 5.3 Delete Event
+- **Endpoint**: `DELETE /api/v1/events/{eventId}`
+- **Response**
 ```json
-{
-  "message": "Event deleted successfully"
-}
+{ "success": true }
 ```
 
----
-
-## 4. Group Join Requests
-
-### 4.1 Send Join Request
-
-**POST** `/api/v1/groups/{groupId}/join`
-
-**Request**
-
+### 5.4 Archive Event
+- **Endpoint**: `POST /api/v1/events/{eventId}/archive`
+- **Response**
 ```json
-{
-  "userId": "u22222"
-}
-```
-
-**Response**
-
-```json
-{
-  "message": "Join request sent successfully"
-}
+{ "success": true }
 ```
 
 ---
 
-### 4.2 Get Pending Join Requests (Admin Only)
+## 6. Export
 
-**GET** `/api/v1/groups/{groupId}/requests`
-
-**Response**
-
-```json
-[
-  {
-    "requestId": "r999",
-    "userId": "u22222",
-    "status": "PENDING"
-  }
-]
-```
-
----
-
-### 4.3 Approve/Reject Join Request
-
-**POST** `/api/v1/groups/{groupId}/requests/{requestId}`
-
-**Request**
-
-```json
-{
-  "status": "APPROVED" // or "REJECTED"
-}
-```
-
-**Response**
-
-```json
-{
-  "message": "Join request updated"
-}
-```
-
----
-
-## 5. Archiving
-
-### 5.1 Archive Event
-
-**POST** `/api/v1/events/{eventId}/archive`
-
-**Response**
-
-```json
-{
-  "message": "Event archived successfully"
-}
-```
-
----
-
-## 6. Data Export
-
-### 6.1 Export Events (Excel/PDF)
-
-**GET** `/api/v1/events/export?groupId=g67890&format=excel`
-
-**Response**
-
-* Returns a file (Excel/PDF) for download.
-
----
-
-# Notes
-
-* All authenticated routes require a Bearer JWT token.
-* Dates follow `YYYY-MM-DD` format.
-* Errors follow this schema:
-
-```json
-{
-  "error": "Invalid request",
-  "details": "Password must be at least 6 characters"
-}
-```
-
-```
-
----
-
-This is the **latest master version** of our API contracts.  
-From now, whenever we add/modify endpoints, I’ll update this single file.  
-
-Do you want me to **save this file into your project root (`docs/api_contracts.md`)** right away so we can lock it in for reference?
-```
+### 6.1 Export Events
+- **Endpoint**: `GET /api/v1/groups/{groupId}/events/export?format=excel|pdf`
+- **Response**
+- File download (`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` or `application/pdf`)
